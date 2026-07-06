@@ -21,8 +21,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-@media(max-width:700px){.g2,.g3,.g4,.g5{grid-template-columns:1fr 1fr}}
-@media(max-width:420px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media(max-width:700px){.g2,.g3,.g4,.g5,.g6{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.g2,.g3,.g4,.g5,.g6{grid-template-columns:1fr}}
 .row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f0eb;gap:8px}
 .row:last-child{border-bottom:none}
 .inp{width:100%;padding:7px 10px;font-size:13px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#1a1a1a;outline:none}
@@ -100,14 +101,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <!-- ГЛАВНЫЙ БЛОК: ТЕЛО -->
     <div class="card" id="body-card">
       <div class="sec">Тело денег</div>
-      <div class="g5">
+      <div class="g6">
 
         <!-- ФАКТИЧЕСКОЕ ТЕЛО — главная цифра -->
         <div class="surface" style="grid-column:span 1">
           <div class="lbl">Фактическое тело</div>
           <div class="big" id="actual-display">—</div>
           <div style="font-size:11px;color:#888;margin-top:6px;line-height:1.6">
-            = Р/С + Техника + Доп.расходы<br>+ Нам должны + План.маржа − Мы должны
+            = Р/С + Техника + Доп.расходы<br>+ Нам должны + Наша маржа − Мы должны
           </div>
         </div>
 
@@ -147,6 +148,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div style="font-size:11px;color:#aaa;margin-top:4px">Из раздела маржи от продаж</div>
         </div>
 
+        <!-- ПОТЕНЦИАЛЬНАЯ МАРЖА -->
+        <div class="surface" style="border-left:3px solid #a855f7">
+          <div class="lbl">Потенц. маржа</div>
+          <div class="big" id="potential-margin-display" style="color:#7c3aed">—</div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px">План. маржа по технике</div>
+        </div>
+
       </div>
     </div>
 
@@ -182,8 +190,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <span style="font-size:12px;color:#888">Итого вложено</span>
           <div style="text-align:right">
             <span class="med" style="color:#854F0B" id="tech-total">0 ₽</span>
-            <div style="font-size:11px;color:#1a6b3c;margin-top:2px" id="tech-total-margin"></div>
+            <div style="font-size:11px;margin-top:3px" id="tech-total-margin"></div>
           </div>
+        </div>
+        <div style="margin-top:8px;background:#f0f7f0;border-radius:8px;padding:8px 12px;font-size:12px;color:#1a6b3c;display:none" id="tech-margin-hint">
+          💡 Потенциальная маржа при продаже всей техники: <b id="tech-margin-potential">—</b>
         </div>
       </div>
 
@@ -295,9 +306,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
 
 const firebaseConfig = {
   apiKey: "AIzaSyAOjAawZaROpFRGypi7B--lSAXkD_IF1BM",
@@ -309,8 +320,8 @@ const firebaseConfig = {
   appId: "1:1027350990477:web:d6e6415e14df1be75adcc4"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+const app = firebase.initializeApp(firebaseConfig);
+const db  = firebase.database();
 const fmt = n => Math.round(n).toLocaleString('ru');
 const USERS = {
   'Евгений':   {color:'#185FA5',bg:'#E6F1FB',initials:'ЕВ'},
@@ -326,10 +337,10 @@ const setSyncing=()=>{document.getElementById('sdot').className='sdot ssav';docu
 const setSynced =()=>{document.getElementById('sdot').className='sdot sok'; document.getElementById('slbl').textContent='синхронизировано';};
 const getU=n=>USERS[n]||{color:'#888',bg:'#f0f0f0',initials:(n||'??').slice(0,2).toUpperCase()};
 
-async function fbSet(path,val){setSyncing();await set(ref(db,path),val);setSynced();}
+async function fbSet(path,val){setSyncing();await db.ref(path).set(val);setSynced();}
 
 function listenAll(){
-  onValue(ref(db,'data'),snap=>{
+  db.ref('data').on('value',snap=>{
     const d=snap.val()||{};
     st.init  =d.init  ||0; st.rs    =d.rs    ||0; st.rsDate=d.rsDate||'';
     st.margin=d.margin||0; st.sc    =d.sc    ||0; st.am    =d.am    ||0;
@@ -340,11 +351,9 @@ function listenAll(){
     if(st.init)   document.getElementById('body-init-inp').value=st.init;
     if(st.rs)     document.getElementById('rs-inp').value=st.rs;
     if(st.margin) document.getElementById('margin-inp').value=st.margin;
-    if(st.sc)     document.getElementById('sales-cnt').value=st.sc;
-    if(st.am)     document.getElementById('avg-mgn').value=st.am;
     render();
   });
-  onValue(ref(db,'presence'),snap=>renderOnline(snap.val()||{}));
+  db.ref('presence').on('value',snap=>renderOnline(snap.val()||{}));
 }
 
 function renderOnline(p){
@@ -359,9 +368,9 @@ function renderOnline(p){
 
 async function updatePresence(){
   if(!currentUser)return;
-  const snap=await new Promise(r=>onValue(ref(db,'presence'),r,{onlyOnce:true}));
+  const snap=await db.ref('presence').once('value');
   const p=snap.val()||{};p[currentUser]=Date.now();
-  await set(ref(db,'presence'),p);
+  await db.ref('presence').set(p);
 }
 
 window.doLogin=function(name){
@@ -481,8 +490,8 @@ function render(){
   const recvTotal=st.recv.reduce((a,r)=>a+r.amount,0);
   const oweTotal =st.owe.reduce((a,o)=>a+o.amount,0);
 
-  // ФОРМУЛА: Факт = Р/С + Техника + Доп.расходы + План.маржа + Нам должны − Мы должны
-  const actual = st.rs + techTotal + extraTotal + marginTotal + recvTotal - oweTotal;
+  // ФОРМУЛА: Факт = Р/С + Техника + Доп.расходы + Нам должны + Наша маржа − Мы должны
+  const actual = st.rs + techTotal + extraTotal + recvTotal + st.margin - oweTotal;
   const hasData = st.rs>0 || techTotal>0;
   // Красный если факт < план (и план задан)
   const bodyLow = st.init>0 && hasData && actual<st.init;
@@ -503,12 +512,18 @@ function render(){
 
   document.getElementById('invested-display').textContent=fmt(techTotal+extraTotal)+' ₽';
   document.getElementById('tech-total').textContent=fmt(techTotal+extraTotal)+' ₽';
-  const techTotalEl = document.getElementById('tech-total-margin');
-  if(techTotalEl){
-    let parts=[];
-    if(extraTotal) parts.push(fmt(extraTotal)+' ₽ доп. расходы');
-    if(marginTotal) parts.push(fmt(marginTotal)+' ₽ план. маржа');
-    techTotalEl.textContent=parts.join(' · ');
+  const techTotalEl=document.getElementById('tech-total-margin');
+  if(techTotalEl) techTotalEl.textContent=extraTotal?fmt(extraTotal)+' ₽ доп. расходы':'';
+  const hintEl=document.getElementById('tech-margin-hint');
+  const potEl=document.getElementById('tech-margin-potential');
+  if(hintEl && potEl){
+    if(marginTotal){
+      hintEl.style.display='block';
+      potEl.textContent=fmt(marginTotal)+' ₽';
+      potEl.style.color=marginTotal<0?'#c0392b':'#1a6b3c';
+    } else {
+      hintEl.style.display='none';
+    }
   }
   document.getElementById('pay-total').textContent=fmt(payTotal)+' ₽';
   document.getElementById('recv-total').textContent=fmt(recvTotal)+' ₽';
@@ -516,6 +531,14 @@ function render(){
   document.getElementById('margin-display').textContent=st.margin?fmt(st.margin)+' ₽':'—';
   const bmd = document.getElementById('body-margin-display');
   if(bmd) bmd.textContent=st.margin?fmt(st.margin)+' ₽':'—';
+  const pmd = document.getElementById('potential-margin-display');
+  if(pmd){
+    pmd.textContent = marginTotal ? fmt(marginTotal)+' ₽' : '—';
+    pmd.style.color = marginTotal < 0 ? '#c0392b' : '#7c3aed';
+  }
+  // убираем старый hint блок если есть
+  const hintEl2=document.getElementById('tech-margin-hint');
+  if(hintEl2) hintEl2.style.display='none';
 
   // СВОДКА
   const debts=recvTotal-oweTotal;
