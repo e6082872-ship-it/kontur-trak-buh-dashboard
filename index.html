@@ -408,7 +408,7 @@ window.addTech=async function(){
   document.getElementById('tech-margin').value='';
   document.getElementById('tech-extra').value='';
 };
-window.removeTech=async function(id){await set(ref(db,'data/tech/'+id),null);};
+window.removeTech=async function(id){await db.ref('data/tech/'+id).set(null);};
 window.startEditTech=function(id){editingTech=id;render();};
 window.cancelEditTech=function(){editingTech=null;render();};
 window.saveEditTech=async function(id){
@@ -432,7 +432,7 @@ window.addPay=async function(){
   const id=Date.now();await fbSet('data/pay/'+id,{id,name,date,amount,by:currentUser});
   document.getElementById('pay-name').value='';document.getElementById('pay-date').value='';document.getElementById('pay-amount').value='';
 };
-window.removePay=async function(id){await set(ref(db,'data/pay/'+id),null);};
+window.removePay=async function(id){await db.ref('data/pay/'+id).set(null);};
 window.startEditPay=function(id){editingPay=id;render();};
 window.cancelEditPay=function(){editingPay=null;render();};
 window.saveEditPay=async function(id){
@@ -452,7 +452,7 @@ window.addRecv=async function(){
   const id=Date.now();await fbSet('data/recv/'+id,{id,name,amount,by:currentUser});
   document.getElementById('recv-name').value='';document.getElementById('recv-amount').value='';
 };
-window.removeRecv=async function(id){await set(ref(db,'data/recv/'+id),null);};
+window.removeRecv=async function(id){await db.ref('data/recv/'+id).set(null);};
 window.startEditRecv=function(id){editingRecv=id;render();};
 window.cancelEditRecv=function(){editingRecv=null;render();};
 window.saveEditRecv=async function(id){
@@ -471,7 +471,7 @@ window.addOwe=async function(){
   const id=Date.now();await fbSet('data/owe/'+id,{id,name,amount,by:currentUser});
   document.getElementById('owe-name').value='';document.getElementById('owe-amount').value='';
 };
-window.removeOwe=async function(id){await set(ref(db,'data/owe/'+id),null);};
+window.removeOwe=async function(id){await db.ref('data/owe/'+id).set(null);};
 window.startEditOwe=function(id){editingOwe=id;render();};
 window.cancelEditOwe=function(){editingOwe=null;render();};
 window.saveEditOwe=async function(id){
