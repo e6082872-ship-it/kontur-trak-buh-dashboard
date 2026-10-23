@@ -183,7 +183,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <input class="inp" type="number" id="tech-margin" placeholder="План. маржа ₽" step="10000">
               <button class="btn" onclick="addTech()">+</button>
             </div>
-            <input class="inp" type="number" id="tech-extra" placeholder="Доп. расходы ₽ (ремонт, доставка...)" step="10000">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <input class="inp" type="number" id="tech-extra" placeholder="Доп. расходы ₽ (ремонт, доставка...)" step="10000">
+              <input class="inp" type="text" id="tech-extra-note" placeholder="Комментарий (за что)">
+            </div>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0eb;padding-top:10px;margin-top:10px">
@@ -400,13 +403,15 @@ window.addTech=async function(){
   const amount=parseFloat(document.getElementById('tech-amount').value)||0;
   const margin=parseFloat(document.getElementById('tech-margin').value)||0;
   const extra=parseFloat(document.getElementById('tech-extra').value)||0;
+  const extraNote=document.getElementById('tech-extra-note').value.trim();
   if(!name||!amount)return;
-  const id=Date.now();await fbSet('data/tech/'+id,{id,name,type,date,amount,margin,extra,by:currentUser});
+  const id=Date.now();await fbSet('data/tech/'+id,{id,name,type,date,amount,margin,extra,extraNote,by:currentUser});
   document.getElementById('tech-name').value='';
   document.getElementById('tech-date').value='';
   document.getElementById('tech-amount').value='';
   document.getElementById('tech-margin').value='';
   document.getElementById('tech-extra').value='';
+  document.getElementById('tech-extra-note').value='';
 };
 window.removeTech=async function(id){await db.ref('data/tech/'+id).set(null);};
 window.startEditTech=function(id){editingTech=id;render();};
@@ -418,9 +423,10 @@ window.saveEditTech=async function(id){
   const amount=parseFloat(document.getElementById('et-amt-'+id).value)||0;
   const margin=parseFloat(document.getElementById('et-mgn-'+id).value)||0;
   const extra=parseFloat(document.getElementById('et-ext-'+id).value)||0;
+  const extraNote=document.getElementById('et-enote-'+id).value.trim();
   if(!name||!amount)return;
   const item=st.tech.find(t=>t.id===id);
-  await fbSet('data/tech/'+id,{...item,name,type,date,amount,margin,extra});editingTech=null;
+  await fbSet('data/tech/'+id,{...item,name,type,date,amount,margin,extra,extraNote});editingTech=null;
 };
 
 // ПЛАТЕЖИ
@@ -572,7 +578,7 @@ function render(){
             const weight=days>60?'700':'500';
             return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${bg};color:${color};font-weight:${weight}">📅 ${days} дн. в продаже${days>60?' 🔴':''}</span>`;
           })():''}
-          ${t.extra?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:#f5f0ff;color:#6b3fa0">доп. ${fmt(t.extra)} ₽</span>`:''}
+          ${t.extra?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:#f5f0ff;color:#6b3fa0">доп. ${fmt(t.extra)} ₽${t.extraNote?` · ${t.extraNote}`:''}</span>`:''}
           ${t.margin?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:${t.margin<0?'#fff0f0':'#eafaf1'};color:${t.margin<0?'#c0392b':'#1a6b3c'}">план. маржа ${fmt(t.margin)} ₽</span>`:''}
           ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
         </div>
@@ -593,6 +599,9 @@ function render(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <input class="inp" type="number" id="et-amt-${t.id}" value="${t.amount}" step="100000" placeholder="Сумма покупки ₽">
           <input class="inp" type="number" id="et-ext-${t.id}" value="${t.extra||''}" step="10000" placeholder="Доп. расходы ₽">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:6px">
+          <input class="inp" type="text" id="et-enote-${t.id}" value="${t.extraNote||''}" placeholder="Комментарий к доп. расходам">
         </div>
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
           <input class="inp" type="number" id="et-mgn-${t.id}" value="${t.margin||''}" step="10000" placeholder="План. маржа ₽">
