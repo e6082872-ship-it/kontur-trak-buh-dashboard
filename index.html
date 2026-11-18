@@ -92,6 +92,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div id="online-users" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <div style="font-size:12px;color:#888;display:flex;align-items:center;gap:8px">
         <span style="display:flex;align-items:center"><span class="sdot sok" id="sdot"></span><span id="slbl">синхронизировано</span></span>
+        <button class="btn" style="padding:4px 10px;font-size:12px" id="trash-btn" onclick="showTrash()">🗑 Корзина</button>
         <button class="btn" style="padding:4px 10px;font-size:12px" onclick="doLogout()">Выйти</button>
       </div>
     </div>
@@ -339,6 +340,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- КОРЗИНА -->
+<div id="trash-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;overflow-y:auto">
+  <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;padding:24px;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:600">🗑 Корзина</div>
+      <button class="btn" onclick="document.getElementById('trash-modal').style.display='none'">✕ Закрыть</button>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Записи можно восстановить или удалить навсегда</div>
+    <div id="trash-content"></div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
@@ -377,10 +390,19 @@ function listenAll(){
     const d=snap.val()||{};
     st.init  =d.init  ||0; st.rs    =d.rs    ||0; st.rsDate=d.rsDate||'';
     st.margin=d.margin||0; st.sc    =d.sc    ||0; st.am    =d.am    ||0;
-    st.tech=d.tech?Object.values(d.tech):[];
-    st.pay =d.pay ?Object.values(d.pay).sort((a,b)=>(a.date||'').localeCompare(b.date||'')):[];
-    st.recv=d.recv?Object.values(d.recv):[];
-    st.owe =d.owe ?Object.values(d.owe) :[];
+    st.tech=d.tech?Object.values(d.tech).filter(x=>!x.deleted):[];
+    st.pay =d.pay ?Object.values(d.pay).filter(x=>!x.deleted).sort((a,b)=>(a.date||'').localeCompare(b.date||'')):[];
+    st.recv=d.recv?Object.values(d.recv).filter(x=>!x.deleted):[];
+    st.owe =d.owe ?Object.values(d.owe).filter(x=>!x.deleted) :[];
+    st.trash={
+      tech:d.tech?Object.values(d.tech).filter(x=>x.deleted):[],
+      pay: d.pay ?Object.values(d.pay).filter(x=>x.deleted) :[],
+      recv:d.recv?Object.values(d.recv).filter(x=>x.deleted) :[],
+      owe: d.owe ?Object.values(d.owe).filter(x=>x.deleted)  :[]
+    };
+    const trashCount=st.trash.tech.length+st.trash.pay.length+st.trash.recv.length+st.trash.owe.length;
+    const trashBtn=document.getElementById('trash-btn');
+    if(trashBtn)trashBtn.textContent='🗑 Корзина'+(trashCount?` (${trashCount})`:'');
     if(st.init)   document.getElementById('body-init-inp').value=st.init;
     if(st.rs)     document.getElementById('rs-inp').value=st.rs;
     if(st.margin) document.getElementById('margin-inp').value=st.margin;
@@ -449,7 +471,11 @@ window.addTech=async function(){
   document.getElementById('tech-sell-price').value='';
   document.getElementById('tech-sell-date').value='';
 };
-window.removeTech=async function(id){await db.ref('data/tech/'+id).set(null);};
+window.removeTech=async function(id){
+  const item=st.tech.find(t=>t.id===id);if(!item)return;
+  if(!confirm('Удалить? Запись попадёт в корзину и её можно восстановить.'))return;
+  await fbSet('data/tech/'+id,{...item,deleted:true});
+};
 window.startEditTech=function(id){editingTech=id;render();};
 window.cancelEditTech=function(){editingTech=null;render();};
 window.saveEditTech=async function(id){
@@ -477,7 +503,11 @@ window.addPay=async function(){
   const id=Date.now();await fbSet('data/pay/'+id,{id,name,date,amount,by:currentUser});
   document.getElementById('pay-name').value='';document.getElementById('pay-date').value='';document.getElementById('pay-amount').value='';
 };
-window.removePay=async function(id){await db.ref('data/pay/'+id).set(null);};
+window.removePay=async function(id){
+  const item=st.pay.find(p=>p.id===id);if(!item)return;
+  if(!confirm('Удалить? Запись попадёт в корзину.'))return;
+  await fbSet('data/pay/'+id,{...item,deleted:true});
+};
 window.startEditPay=function(id){editingPay=id;render();};
 window.cancelEditPay=function(){editingPay=null;render();};
 window.saveEditPay=async function(id){
@@ -497,7 +527,11 @@ window.addRecv=async function(){
   const id=Date.now();await fbSet('data/recv/'+id,{id,name,amount,by:currentUser});
   document.getElementById('recv-name').value='';document.getElementById('recv-amount').value='';
 };
-window.removeRecv=async function(id){await db.ref('data/recv/'+id).set(null);};
+window.removeRecv=async function(id){
+  const item=st.recv.find(r=>r.id===id);if(!item)return;
+  if(!confirm('Удалить? Запись попадёт в корзину.'))return;
+  await fbSet('data/recv/'+id,{...item,deleted:true});
+};
 window.startEditRecv=function(id){editingRecv=id;render();};
 window.cancelEditRecv=function(){editingRecv=null;render();};
 window.saveEditRecv=async function(id){
@@ -516,7 +550,11 @@ window.addOwe=async function(){
   const id=Date.now();await fbSet('data/owe/'+id,{id,name,amount,by:currentUser});
   document.getElementById('owe-name').value='';document.getElementById('owe-amount').value='';
 };
-window.removeOwe=async function(id){await db.ref('data/owe/'+id).set(null);};
+window.removeOwe=async function(id){
+  const item=st.owe.find(o=>o.id===id);if(!item)return;
+  if(!confirm('Удалить? Запись попадёт в корзину.'))return;
+  await fbSet('data/owe/'+id,{...item,deleted:true});
+};
 window.startEditOwe=function(id){editingOwe=id;render();};
 window.cancelEditOwe=function(){editingOwe=null;render();};
 window.saveEditOwe=async function(id){
@@ -753,6 +791,48 @@ window.restoreTech=async function(id){
   const item=st.tech.find(t=>t.id===id);
   if(!item)return;
   await fbSet('data/tech/'+id,{...item,status:'active',sellPrice:0,sellDate:''});
+};
+
+window.showTrash=function(){
+  const modal=document.getElementById('trash-modal');
+  const content=document.getElementById('trash-content');
+  const all=[
+    ...st.trash.tech.map(x=>({...x,_kind:'tech',_label:'Техника'})),
+    ...st.trash.pay.map(x=>({...x,_kind:'pay',_label:'Платёж'})),
+    ...st.trash.recv.map(x=>({...x,_kind:'recv',_label:'Нам должны'})),
+    ...st.trash.owe.map(x=>({...x,_kind:'owe',_label:'Мы должны'})),
+  ];
+  if(!all.length){content.innerHTML='<div style="color:#aaa;font-size:13px;padding:8px 0">Корзина пуста</div>';}
+  else{
+    content.innerHTML=all.map(x=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0eb;gap:8px">
+        <div>
+          <span style="font-size:11px;background:#f0f0eb;padding:2px 7px;border-radius:6px;color:#666;margin-right:6px">${x._label}</span>
+          <span style="font-size:13px">${x.name}</span>
+          ${x.amount?`<span style="font-size:12px;color:#888;margin-left:8px">${fmt(x.amount)} ₽</span>`:''}
+          ${x.date?`<span style="font-size:11px;color:#aaa;margin-left:6px">${new Date(x.date+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="btn btn-ok" style="font-size:12px;padding:4px 10px" onclick="restoreItem('${x._kind}',${x.id})">↩️ Восстановить</button>
+          <button class="btn btn-del" style="font-size:12px;padding:4px 10px" onclick="deleteForever('${x._kind}',${x.id})">✕ Навсегда</button>
+        </div>
+      </div>`).join('');
+  }
+  modal.style.display='block';
+};
+
+window.restoreItem=async function(kind,id){
+  const arr=st.trash[kind];
+  const item=arr.find(x=>x.id===id);if(!item)return;
+  const copy={...item};delete copy.deleted;delete copy._kind;delete copy._label;
+  await fbSet('data/'+kind+'/'+id,copy);
+  showTrash();
+};
+
+window.deleteForever=async function(kind,id){
+  if(!confirm('Удалить навсегда? Восстановить будет невозможно.'))return;
+  await db.ref('data/'+kind+'/'+id).set(null);
+  showTrash();
 };
 
 function renderList(elId,items,editing,normalFn,editFn){
