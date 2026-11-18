@@ -57,6 +57,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .itag-green{background:#eafaf1;color:#1a6b3c}
 .itag-red{background:#fff0f0;color:#c0392b}
 .itag-gray{background:#f0f0eb;color:#666}
+.itag-sold{background:#e8f5e9;color:#1b5e20}
+.archive-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0eb;gap:8px}
+.archive-row:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -187,6 +190,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <input class="inp" type="number" id="tech-extra" placeholder="Доп. расходы ₽ (ремонт, доставка...)" step="10000">
               <input class="inp" type="text" id="tech-extra-note" placeholder="Комментарий (за что)">
             </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <select class="inp" id="tech-status">
+                <option value="active">В продаже</option>
+                <option value="sold">Продано</option>
+              </select>
+              <input class="inp" type="number" id="tech-sell-price" placeholder="Цена продажи ₽" step="100000">
+              <input class="inp" type="date" id="tech-sell-date" placeholder="Дата продажи">
+            </div>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0eb;padding-top:10px;margin-top:10px">
@@ -290,6 +301,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div style="display:flex;gap:6px;margin-top:10px;max-width:400px">
           <input class="inp" type="number" id="margin-inp" placeholder="Сумма ₽" step="50000">
           <button class="btn" onclick="saveMargin()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- АРХИВ ПРОДАЖ -->
+    <div class="card" id="archive-card" style="border-left:4px solid #27ae60">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:18px">✅</span>
+        <div style="font-size:13px;font-weight:500">Архив продаж</div>
+      </div>
+      <div id="archive-list"><div style="font-size:13px;color:#aaa">Нет завершённых сделок</div></div>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0eb;padding-top:10px;margin-top:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-size:12px;color:#888">Итого маржа: </span>
+          <span class="med" style="color:#1a6b3c" id="archive-margin-total">0 ₽</span>
+        </div>
+        <div>
+          <span style="font-size:12px;color:#888">НДС 22% к уплате: </span>
+          <span class="med" style="color:#c0392b" id="archive-vat-total">0 ₽</span>
         </div>
       </div>
     </div>
@@ -404,14 +434,20 @@ window.addTech=async function(){
   const margin=parseFloat(document.getElementById('tech-margin').value)||0;
   const extra=parseFloat(document.getElementById('tech-extra').value)||0;
   const extraNote=document.getElementById('tech-extra-note').value.trim();
+  const status=document.getElementById('tech-status').value;
+  const sellPrice=parseFloat(document.getElementById('tech-sell-price').value)||0;
+  const sellDate=document.getElementById('tech-sell-date').value;
   if(!name||!amount)return;
-  const id=Date.now();await fbSet('data/tech/'+id,{id,name,type,date,amount,margin,extra,extraNote,by:currentUser});
+  const id=Date.now();await fbSet('data/tech/'+id,{id,name,type,date,amount,margin,extra,extraNote,status,sellPrice,sellDate,by:currentUser});
   document.getElementById('tech-name').value='';
   document.getElementById('tech-date').value='';
   document.getElementById('tech-amount').value='';
   document.getElementById('tech-margin').value='';
   document.getElementById('tech-extra').value='';
   document.getElementById('tech-extra-note').value='';
+  document.getElementById('tech-status').value='active';
+  document.getElementById('tech-sell-price').value='';
+  document.getElementById('tech-sell-date').value='';
 };
 window.removeTech=async function(id){await db.ref('data/tech/'+id).set(null);};
 window.startEditTech=function(id){editingTech=id;render();};
@@ -424,9 +460,12 @@ window.saveEditTech=async function(id){
   const margin=parseFloat(document.getElementById('et-mgn-'+id).value)||0;
   const extra=parseFloat(document.getElementById('et-ext-'+id).value)||0;
   const extraNote=document.getElementById('et-enote-'+id).value.trim();
+  const status=document.getElementById('et-status-'+id).value;
+  const sellPrice=parseFloat(document.getElementById('et-sell-'+id).value)||0;
+  const sellDate=document.getElementById('et-sdate-'+id).value;
   if(!name||!amount)return;
   const item=st.tech.find(t=>t.id===id);
-  await fbSet('data/tech/'+id,{...item,name,type,date,amount,margin,extra,extraNote});editingTech=null;
+  await fbSet('data/tech/'+id,{...item,name,type,date,amount,margin,extra,extraNote,status,sellPrice,sellDate});editingTech=null;
 };
 
 // ПЛАТЕЖИ
@@ -489,9 +528,11 @@ window.saveEditOwe=async function(id){
 };
 
 function render(){
-  const techTotal=st.tech.reduce((a,t)=>a+t.amount,0);
-  const extraTotal=st.tech.reduce((a,t)=>a+(t.extra||0),0);
-  const marginTotal=st.tech.reduce((a,t)=>a+(t.margin||0),0);
+  const activeTech=st.tech.filter(t=>t.status!=='sold');
+  const soldTech=st.tech.filter(t=>t.status==='sold');
+  const techTotal=activeTech.reduce((a,t)=>a+t.amount,0);
+  const extraTotal=activeTech.reduce((a,t)=>a+(t.extra||0),0);
+  const marginTotal=activeTech.reduce((a,t)=>a+(t.margin||0),0);
   const payTotal =st.pay.reduce((a,p)=>a+p.amount,0);
   const recvTotal=st.recv.reduce((a,r)=>a+r.amount,0);
   const oweTotal =st.owe.reduce((a,o)=>a+o.amount,0);
@@ -561,55 +602,6 @@ function render(){
     alertZ.innerHTML=`<div class="alert-r">🚨 Тело тратится! Факт меньше плана на <span style="font-size:18px">${fmt(diff)} ₽</span> &nbsp;·&nbsp; Факт: ${fmt(actual)} ₽ &nbsp;·&nbsp; План: ${fmt(st.init)} ₽</div>`;
   } else alertZ.innerHTML='';
 
-  // РЕНДЕР СПИСКОВ
-  renderList('tech-list',st.tech,editingTech,
-    t=>{
-      const days=t.type==='purchase'&&t.date?Math.floor((Date.now()-new Date(t.date+'T00:00:00').getTime())/(1000*60*60*24)):0;
-      const over60=t.type==='purchase'&&days>60;
-      return `<div class="row" style="${over60?'background:#fff5f5;border-radius:8px;padding:8px;margin:2px -4px;border-left:3px solid #e74c3c;':''}">
-      <div style="min-width:0;flex:1">
-        <div style="font-size:13px;font-weight:${over60?'600':'400'}">${t.name}</div>
-        <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
-          <span style="font-size:11px;padding:1px 7px;border-radius:6px;${t.type==='purchase'?'background:#FFF3E0;color:#8a4500':'background:#E8F4FD;color:#1a5276'}">${t.type==='purchase'?'покупка':'бронь'}</span>
-          ${t.date?`<span style="font-size:11px;color:#aaa">${new Date(t.date+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
-          ${t.type==='purchase'&&t.date?(()=>{
-            const color=days>60?'#c0392b':days>30?'#e67e22':'#7f8c8d';
-            const bg=days>60?'#ffe0e0':days>30?'#fff3e0':'#f5f5f5';
-            const weight=days>60?'700':'500';
-            return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${bg};color:${color};font-weight:${weight}">📅 ${days} дн. в продаже${days>60?' 🔴':''}</span>`;
-          })():''}
-          ${t.extra?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:#f5f0ff;color:#6b3fa0">доп. ${fmt(t.extra)} ₽${t.extraNote?` · ${t.extraNote}`:''}</span>`:''}
-          ${t.margin?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:${t.margin<0?'#fff0f0':'#eafaf1'};color:${t.margin<0?'#c0392b':'#1a6b3c'}">план. маржа ${fmt(t.margin)} ₽</span>`:''}
-          ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-        <b style="color:#854F0B">−${fmt(t.amount+(t.extra||0))} ₽</b>
-        <button class="btn-icon" onclick="startEditTech(${t.id})">✏️</button>
-        <button class="btn-icon btn-del" onclick="removeTech(${t.id})">✕</button>
-      </div></div>`;
-    },
-    t=>`<div class="edit-row">
-      <div style="display:grid;gap:6px">
-        <input class="inp" id="et-name-${t.id}" value="${t.name}" placeholder="Название">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <select class="inp" id="et-type-${t.id}"><option value="purchase" ${t.type==='purchase'?'selected':''}>Покупка</option><option value="deposit" ${t.type==='deposit'?'selected':''}>Бронь</option></select>
-          <input class="inp" type="date" id="et-date-${t.id}" value="${t.date||''}">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <input class="inp" type="number" id="et-amt-${t.id}" value="${t.amount}" step="100000" placeholder="Сумма покупки ₽">
-          <input class="inp" type="number" id="et-ext-${t.id}" value="${t.extra||''}" step="10000" placeholder="Доп. расходы ₽">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr;gap:6px">
-          <input class="inp" type="text" id="et-enote-${t.id}" value="${t.extraNote||''}" placeholder="Комментарий к доп. расходам">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
-          <input class="inp" type="number" id="et-mgn-${t.id}" value="${t.margin||''}" step="10000" placeholder="План. маржа ₽">
-          <button class="btn-icon btn-ok" onclick="saveEditTech(${t.id})">✓</button>
-          <button class="btn-icon" onclick="cancelEditTech()">✕</button>
-        </div>
-      </div></div>`);
-
   renderList('pay-list',st.pay,editingPay,
     p=>`<div class="row">
       <div style="min-width:0;flex:1">
@@ -664,7 +656,106 @@ function render(){
       <button class="btn-icon btn-ok" onclick="saveEditOwe(${o.id})">✓</button>
       <button class="btn-icon" onclick="cancelEditOwe()">✕</button>
     </div></div>`);
+
+  // АРХИВ ПРОДАЖ
+  const archiveEl=document.getElementById('archive-list');
+  if(soldTech.length===0){
+    archiveEl.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Нет завершённых сделок</div>';
+  } else {
+    let totalMargin=0;
+    archiveEl.innerHTML=soldTech.map(t=>{
+      const cost=t.amount+(t.extra||0);
+      const realMargin=t.sellPrice?t.sellPrice-cost:null;
+      const vat=realMargin&&realMargin>0?Math.round(realMargin*22/122):0;
+      if(realMargin!==null) totalMargin+=realMargin;
+      const daysInSale=t.date&&t.sellDate?Math.floor((new Date(t.sellDate+'T00:00:00')-new Date(t.date+'T00:00:00'))/(1000*60*60*24)):null;
+      return `<div class="archive-row">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:500">${t.name}</div>
+          <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
+            <span class="itag itag-sold">✅ продано</span>
+            ${t.sellDate?`<span style="font-size:11px;color:#aaa">${new Date(t.sellDate+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
+            ${daysInSale!==null?`<span style="font-size:11px;color:#888">📅 ${daysInSale} дн.</span>`:''}
+            ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
+          </div>
+          <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+            <span style="font-size:11px;color:#888">куплено: <b>${fmt(cost)} ₽</b></span>
+            ${t.sellPrice?`<span style="font-size:11px;color:#888">продано: <b style="color:#1a6b3c">${fmt(t.sellPrice)} ₽</b></span>`:''}
+            ${realMargin!==null?`<span style="font-size:11px;color:#888">маржа: <b style="${realMargin>=0?'color:#1a6b3c':'color:#c0392b'}">${realMargin>=0?'+':''}${fmt(realMargin)} ₽</b></span>`:''}
+            ${vat>0?`<span style="font-size:11px;color:#888">НДС 22%: <b style="color:#c0392b">${fmt(vat)} ₽</b></span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <button class="btn-icon" onclick="restoreTech(${t.id})" title="Вернуть в продажу">↩️</button>
+          <button class="btn-icon btn-del" onclick="removeTech(${t.id})">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    const totalVat=soldTech.reduce((a,t)=>{
+      const cost=t.amount+(t.extra||0);
+      const rm=t.sellPrice?t.sellPrice-cost:0;
+      return a+(rm>0?Math.round(rm*22/122):0);
+    },0);
+    document.getElementById('archive-margin-total').textContent=(totalMargin>=0?'+':'')+fmt(totalMargin)+' ₽';
+    document.getElementById('archive-margin-total').style.color=totalMargin>=0?'#1a6b3c':'#c0392b';
+    document.getElementById('archive-vat-total').textContent=fmt(totalVat)+' ₽';
+  }
+
+  // рендер активных в tech-list (только не проданные)
+  renderList('tech-list',activeTech,editingTech,
+    t=>{
+      const days=t.type==='purchase'&&t.date?Math.floor((Date.now()-new Date(t.date+'T00:00:00').getTime())/(1000*60*60*24)):0;
+      const over60=t.type==='purchase'&&days>60;
+      return `<div class="row" style="${over60?'background:#fff5f5;border-radius:8px;padding:8px;margin:2px -4px;border-left:3px solid #e74c3c;':''}">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:13px;font-weight:${over60?'600':'400'}">${t.name}</div>
+        <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;padding:1px 7px;border-radius:6px;${t.type==='purchase'?'background:#FFF3E0;color:#8a4500':'background:#E8F4FD;color:#1a5276'}">${t.type==='purchase'?'покупка':'бронь'}</span>
+          ${t.date?`<span style="font-size:11px;color:#aaa">${new Date(t.date+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
+          ${t.type==='purchase'&&t.date?(()=>{
+            const color=days>60?'#c0392b':days>30?'#e67e22':'#7f8c8d';
+            const bg=days>60?'#ffe0e0':days>30?'#fff3e0':'#f5f5f5';
+            const weight=days>60?'700':'500';
+            return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${bg};color:${color};font-weight:${weight}">📅 ${days} дн. в продаже${days>60?' 🔴':''}</span>`;
+          })():''}
+          ${t.extra?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:#f5f0ff;color:#6b3fa0">доп. ${fmt(t.extra)} ₽${t.extraNote?` · ${t.extraNote}`:''}</span>`:''}
+          ${t.margin?`<span style="font-size:11px;padding:1px 7px;border-radius:6px;background:${t.margin<0?'#fff0f0':'#eafaf1'};color:${t.margin<0?'#c0392b':'#1a6b3c'}">план. маржа ${fmt(t.margin)} ₽</span>`:''}
+          ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <b style="color:#854F0B">−${fmt(t.amount+(t.extra||0))} ₽</b>
+        <button class="btn-icon" onclick="startEditTech(${t.id})">✏️</button>
+        <button class="btn-icon btn-del" onclick="removeTech(${t.id})">✕</button>
+      </div></div>`;
+    },
+    t=>`<div class="edit-row">
+      <div style="display:grid;gap:6px">
+        <input class="inp" id="et-name-${t.id}" value="${t.name}" placeholder="Название">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <select class="inp" id="et-type-${t.id}"><option value="purchase" ${t.type==='purchase'?'selected':''}>Покупка</option><option value="deposit" ${t.type==='deposit'?'selected':''}>Бронь</option></select>
+          <input class="inp" type="date" id="et-date-${t.id}" value="${t.date||''}">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <input class="inp" type="number" id="et-amt-${t.id}" value="${t.amount}" step="100000" placeholder="Сумма покупки ₽">
+          <input class="inp" type="number" id="et-ext-${t.id}" value="${t.extra||''}" step="10000" placeholder="Доп. расходы ₽">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:6px">
+          <input class="inp" type="text" id="et-enote-${t.id}" value="${t.extraNote||''}" placeholder="Комментарий к доп. расходам">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
+          <input class="inp" type="number" id="et-mgn-${t.id}" value="${t.margin||''}" step="10000" placeholder="План. маржа ₽">
+          <button class="btn-icon btn-ok" onclick="saveEditTech(${t.id})">✓</button>
+          <button class="btn-icon" onclick="cancelEditTech()">✕</button>
+        </div>
+      </div></div>`);
 }
+
+window.restoreTech=async function(id){
+  const item=st.tech.find(t=>t.id===id);
+  if(!item)return;
+  await fbSet('data/tech/'+id,{...item,status:'active',sellPrice:0,sellDate:''});
+};
 
 function renderList(elId,items,editing,normalFn,editFn){
   const el=document.getElementById(elId);
