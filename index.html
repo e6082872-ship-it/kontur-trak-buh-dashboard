@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -528,8 +528,8 @@ window.saveEditOwe=async function(id){
 };
 
 function render(){
-  const activeTech=st.tech.filter(t=>t.status!=='sold');
-  const soldTech=st.tech.filter(t=>t.status==='sold');
+  const activeTech=st.tech.filter(t=>(t.status||'active').trim()!=='sold');
+  const soldTech=st.tech.filter(t=>(t.status||'').trim()==='sold');
   const techTotal=activeTech.reduce((a,t)=>a+t.amount,0);
   const extraTotal=activeTech.reduce((a,t)=>a+(t.extra||0),0);
   const marginTotal=activeTech.reduce((a,t)=>a+(t.margin||0),0);
@@ -661,13 +661,16 @@ function render(){
   const archiveEl=document.getElementById('archive-list');
   if(soldTech.length===0){
     archiveEl.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Нет завершённых сделок</div>';
+    document.getElementById('archive-margin-total').textContent='0 ₽';
+    document.getElementById('archive-vat-total').textContent='0 ₽';
   } else {
     let totalMargin=0;
+    let totalVat2=0;
     archiveEl.innerHTML=soldTech.map(t=>{
       const cost=t.amount+(t.extra||0);
       const realMargin=t.sellPrice?t.sellPrice-cost:null;
       const vat=realMargin&&realMargin>0?Math.round(realMargin*22/122):0;
-      if(realMargin!==null) totalMargin+=realMargin;
+      if(realMargin!==null){totalMargin+=realMargin;totalVat2+=vat;}
       const daysInSale=t.date&&t.sellDate?Math.floor((new Date(t.sellDate+'T00:00:00')-new Date(t.date+'T00:00:00'))/(1000*60*60*24)):null;
       return `<div class="archive-row">
         <div style="min-width:0;flex:1">
@@ -687,18 +690,13 @@ function render(){
         </div>
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
           <button class="btn-icon" onclick="restoreTech(${t.id})" title="Вернуть в продажу">↩️</button>
-          <button class="btn-icon btn-del" onclick="removeTech(${t.id})">✕</button>
+          <button class="btn-icon btn-del" onclick="removeTech(${t.id})" title="Удалить">✕</button>
         </div>
       </div>`;
     }).join('');
-    const totalVat=soldTech.reduce((a,t)=>{
-      const cost=t.amount+(t.extra||0);
-      const rm=t.sellPrice?t.sellPrice-cost:0;
-      return a+(rm>0?Math.round(rm*22/122):0);
-    },0);
     document.getElementById('archive-margin-total').textContent=(totalMargin>=0?'+':'')+fmt(totalMargin)+' ₽';
     document.getElementById('archive-margin-total').style.color=totalMargin>=0?'#1a6b3c':'#c0392b';
-    document.getElementById('archive-vat-total').textContent=fmt(totalVat)+' ₽';
+    document.getElementById('archive-vat-total').textContent=fmt(totalVat2)+' ₽';
   }
 
   // рендер активных в tech-list (только не проданные)
