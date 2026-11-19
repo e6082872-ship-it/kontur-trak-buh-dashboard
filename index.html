@@ -149,16 +149,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- МАРЖА -->
         <div class="surface" style="border-left:3px solid #1D9E75">
-          <div class="lbl">Наша маржа</div>
+          <div class="lbl">Р/С маржа</div>
           <div class="big" id="body-margin-display" style="color:#0F6E56">—</div>
           <div style="font-size:11px;color:#aaa;margin-top:4px">Из раздела маржи от продаж</div>
-        </div>
-
-        <!-- ПОТЕНЦИАЛЬНАЯ МАРЖА -->
-        <div class="surface" style="border-left:3px solid #a855f7">
-          <div class="lbl">Потенц. маржа</div>
-          <div class="big" id="potential-margin-display" style="color:#7c3aed">—</div>
-          <div style="font-size:11px;color:#aaa;margin-top:4px">План. маржа по технике</div>
         </div>
 
         <!-- Р/С НДС -->
@@ -169,7 +162,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <input class="inp" type="number" id="vat-rs-inp" placeholder="₽" step="10000">
             <button class="btn" style="width:100%" onclick="saveVatRS()">Сохранить</button>
           </div>
-          <div style="font-size:11px;color:#aaa;margin-top:4px">Начислено НДС к уплате: <b id="vat-accrued" style="color:#c0392b">—</b></div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px">Начислено: <b id="vat-accrued" style="color:#c0392b">—</b></div>
+        </div>
+
+        <!-- ПОТЕНЦИАЛЬНАЯ МАРЖА -->
+        <div class="surface" style="border-left:3px solid #a855f7">
+          <div class="lbl">Потенц. маржа</div>
+          <div class="big" id="potential-margin-display" style="color:#7c3aed">—</div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px">План. маржа по технике</div>
         </div>
 
       </div>
