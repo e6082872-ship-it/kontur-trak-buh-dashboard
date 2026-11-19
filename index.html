@@ -157,12 +157,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <!-- Р/С НДС -->
         <div class="surface" style="border-left:3px solid #c0392b">
           <div class="lbl">Р/С НДС</div>
-          <div class="big" id="vat-rs-display" style="color:#c0392b">—</div>
+          <div id="vat-rs-display" style="color:#c0392b;font-size:13px;font-weight:700;line-height:1.2;white-space:nowrap">—</div>
           <div style="margin-top:8px;display:grid;gap:5px">
             <input class="inp" type="number" id="vat-rs-inp" placeholder="₽" step="10000">
             <button class="btn" style="width:100%" onclick="saveVatRS()">Сохранить</button>
           </div>
-          <div style="font-size:11px;color:#aaa;margin-top:4px">Начислено: <b id="vat-accrued" style="color:#c0392b">—</b></div>
+          <div style="font-size:10px;color:#aaa;margin-top:4px;white-space:nowrap">Начислено: <b id="vat-accrued" style="color:#c0392b">—</b></div>
         </div>
 
         <!-- ПОТЕНЦИАЛЬНАЯ МАРЖА -->
