@@ -109,6 +109,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sec">Тело денег</div>
       <div class="g6">
 
+        <!-- ФАКТИЧЕСКОЕ ТЕЛО — главная цифра -->
+        <div class="surface" style="grid-column:span 1">
+          <div class="lbl">Фактическое тело</div>
+          <div class="big" id="actual-display">—</div>
+          <div style="font-size:11px;color:#888;margin-top:6px;line-height:1.6">
+            = Р/С + Техника + Доп.расходы<br>+ Нам должны + Наша маржа − Мы должны
+          </div>
+        </div>
+
+        <!-- ОСТАТОК НА Р/С -->
+        <div class="surface">
+          <div class="lbl">Остаток на р/с</div>
+          <div class="big" id="rs-display" style="color:#185FA5">—</div>
+          <div style="margin-top:8px;display:grid;gap:5px">
+            <input class="inp" type="number" id="rs-inp" placeholder="₽" step="10000">
+            <button class="btn" style="width:100%" onclick="saveRS()">Сохранить</button>
+          </div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px" id="rs-date">Обновите сегодня</div>
+        </div>
+
+        <!-- ТЕХНИКА -->
+        <div class="surface">
+          <div class="lbl">Вложено в технику</div>
+          <div class="big" id="invested-display" style="color:#854F0B">—</div>
+          <div style="font-size:11px;color:#aaa;margin-top:6px">Покупки + брони</div>
+        </div>
+
         <!-- ТЕЛО ПЛАН — справочная цифра, пунктирная рамка -->
         <div class="surface-plan">
           <div class="lbl" style="color:#7080b0">Тело (план) <span class="itag itag-gray">справка</span></div>
