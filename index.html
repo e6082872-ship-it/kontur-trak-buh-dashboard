@@ -22,8 +22,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .g6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-@media(max-width:700px){.g2,.g3,.g4,.g5,.g6{grid-template-columns:1fr 1fr}}
-@media(max-width:420px){.g2,.g3,.g4,.g5,.g6{grid-template-columns:1fr}}
+.g7{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+@media(max-width:900px){.g7{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:700px){.g2,.g3,.g4,.g5,.g6,.g7{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.g2,.g3,.g4,.g5,.g6,.g7{grid-template-columns:1fr}}
 .row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f0eb;gap:8px}
 .row:last-child{border-bottom:none}
 .inp{width:100%;padding:7px 10px;font-size:13px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#1a1a1a;outline:none}
@@ -105,7 +107,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <!-- ГЛАВНЫЙ БЛОК: ТЕЛО -->
     <div class="card" id="body-card">
       <div class="sec">Тело денег</div>
-      <div class="g6">
+      <div class="g7">
 
         <!-- ФАКТИЧЕСКОЕ ТЕЛО — главная цифра -->
         <div class="surface" style="grid-column:span 1">
@@ -157,6 +159,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="lbl">Потенц. маржа</div>
           <div class="big" id="potential-margin-display" style="color:#7c3aed">—</div>
           <div style="font-size:11px;color:#aaa;margin-top:4px">План. маржа по технике</div>
+        </div>
+
+        <!-- Р/С НДС -->
+        <div class="surface" style="border-left:3px solid #c0392b">
+          <div class="lbl">Р/С НДС</div>
+          <div class="big" id="vat-rs-display" style="color:#c0392b">—</div>
+          <div style="margin-top:8px;display:grid;gap:5px">
+            <input class="inp" type="number" id="vat-rs-inp" placeholder="₽" step="10000">
+            <button class="btn" style="width:100%" onclick="saveVatRS()">Сохранить</button>
+          </div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px">Начислено НДС к уплате: <b id="vat-accrued" style="color:#c0392b">—</b></div>
         </div>
 
       </div>
@@ -308,9 +321,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- АРХИВ ПРОДАЖ -->
     <div class="card" id="archive-card" style="border-left:4px solid #27ae60">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span style="font-size:18px">✅</span>
-        <div style="font-size:13px;font-weight:500">Архив продаж</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">✅</span>
+          <div style="font-size:13px;font-weight:500">Архив продаж</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:12px;color:#888">Период:</span>
+          <input class="inp" type="date" id="archive-from" style="width:140px;font-size:12px;padding:4px 8px" onchange="renderArchive()">
+          <span style="font-size:12px;color:#aaa">—</span>
+          <input class="inp" type="date" id="archive-to" style="width:140px;font-size:12px;padding:4px 8px" onchange="renderArchive()">
+          <button class="btn" style="font-size:12px;padding:4px 10px" onclick="clearArchiveFilter()">Все</button>
+        </div>
       </div>
       <div id="archive-list"><div style="font-size:13px;color:#aaa">Нет завершённых сделок</div></div>
       <div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0eb;padding-top:10px;margin-top:10px;flex-wrap:wrap;gap:8px">
@@ -376,7 +398,7 @@ const USERS = {
 };
 
 let currentUser=null;
-let st={init:0,rs:0,rsDate:'',margin:0,sc:0,am:0,tech:[],pay:[],recv:[],owe:[]};
+let st={init:0,rs:0,rsDate:'',margin:0,vatRS:0,sc:0,am:0,tech:[],pay:[],recv:[],owe:[]};
 let editingTech=null,editingPay=null,editingRecv=null,editingOwe=null;
 
 const setSyncing=()=>{document.getElementById('sdot').className='sdot ssav';document.getElementById('slbl').textContent='сохраняем…';};
@@ -389,7 +411,8 @@ function listenAll(){
   db.ref('data').on('value',snap=>{
     const d=snap.val()||{};
     st.init  =d.init  ||0; st.rs    =d.rs    ||0; st.rsDate=d.rsDate||'';
-    st.margin=d.margin||0; st.sc    =d.sc    ||0; st.am    =d.am    ||0;
+    st.margin=d.margin||0; st.vatRS =d.vatRS ||0; st.sc    =d.sc    ||0; st.am=d.am||0;
+    if(st.vatRS) document.getElementById('vat-rs-inp').value=st.vatRS;
     st.tech=d.tech?Object.values(d.tech).filter(x=>!x.deleted):[];
     st.pay =d.pay ?Object.values(d.pay).filter(x=>!x.deleted).sort((a,b)=>(a.date||'').localeCompare(b.date||'')):[];
     st.recv=d.recv?Object.values(d.recv).filter(x=>!x.deleted):[];
@@ -446,6 +469,7 @@ window.saveRS=async function(){
   await fbSet('data/rs',v);await fbSet('data/rsDate',new Date().toLocaleDateString('ru-RU'));
 };
 window.saveMargin=async function(){await fbSet('data/margin',parseFloat(document.getElementById('margin-inp').value)||0);};
+window.saveVatRS=async function(){await fbSet('data/vatRS',parseFloat(document.getElementById('vat-rs-inp').value)||0);};
 
 // ТЕХНИКА
 window.addTech=async function(){
@@ -695,47 +719,17 @@ function render(){
       <button class="btn-icon" onclick="cancelEditOwe()">✕</button>
     </div></div>`);
 
-  // АРХИВ ПРОДАЖ
-  const archiveEl=document.getElementById('archive-list');
-  if(soldTech.length===0){
-    archiveEl.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Нет завершённых сделок</div>';
-    document.getElementById('archive-margin-total').textContent='0 ₽';
-    document.getElementById('archive-vat-total').textContent='0 ₽';
-  } else {
-    let totalMargin=0;
-    let totalVat2=0;
-    archiveEl.innerHTML=soldTech.map(t=>{
-      const cost=t.amount+(t.extra||0);
-      const realMargin=t.sellPrice?t.sellPrice-cost:null;
-      const vat=realMargin&&realMargin>0?Math.round(realMargin*22/122):0;
-      if(realMargin!==null){totalMargin+=realMargin;totalVat2+=vat;}
-      const daysInSale=t.date&&t.sellDate?Math.floor((new Date(t.sellDate+'T00:00:00')-new Date(t.date+'T00:00:00'))/(1000*60*60*24)):null;
-      return `<div class="archive-row">
-        <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:500">${t.name}</div>
-          <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
-            <span class="itag itag-sold">✅ продано</span>
-            ${t.sellDate?`<span style="font-size:11px;color:#aaa">${new Date(t.sellDate+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
-            ${daysInSale!==null?`<span style="font-size:11px;color:#888">📅 ${daysInSale} дн.</span>`:''}
-            ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
-          </div>
-          <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
-            <span style="font-size:11px;color:#888">куплено: <b>${fmt(cost)} ₽</b></span>
-            ${t.sellPrice?`<span style="font-size:11px;color:#888">продано: <b style="color:#1a6b3c">${fmt(t.sellPrice)} ₽</b></span>`:''}
-            ${realMargin!==null?`<span style="font-size:11px;color:#888">маржа: <b style="${realMargin>=0?'color:#1a6b3c':'color:#c0392b'}">${realMargin>=0?'+':''}${fmt(realMargin)} ₽</b></span>`:''}
-            ${vat>0?`<span style="font-size:11px;color:#888">НДС 22%: <b style="color:#c0392b">${fmt(vat)} ₽</b></span>`:''}
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <button class="btn-icon" onclick="restoreTech(${t.id})" title="Вернуть в продажу">↩️</button>
-          <button class="btn-icon btn-del" onclick="removeTech(${t.id})" title="Удалить">✕</button>
-        </div>
-      </div>`;
-    }).join('');
-    document.getElementById('archive-margin-total').textContent=(totalMargin>=0?'+':'')+fmt(totalMargin)+' ₽';
-    document.getElementById('archive-margin-total').style.color=totalMargin>=0?'#1a6b3c':'#c0392b';
-    document.getElementById('archive-vat-total').textContent=fmt(totalVat2)+' ₽';
-  }
+  // Р/С НДС
+  document.getElementById('vat-rs-display').textContent=st.vatRS?fmt(st.vatRS)+' ₽':'—';
+  const allSoldVat=soldTech.reduce((a,t)=>{
+    const cost=t.amount+(t.extra||0);
+    const rm=t.sellPrice?t.sellPrice-cost:0;
+    return a+(rm>0?Math.round(rm*22/122):0);
+  },0);
+  const vaccrEl=document.getElementById('vat-accrued');
+  if(vaccrEl) vaccrEl.textContent=allSoldVat?fmt(allSoldVat)+' ₽':'—';
+
+  renderArchive();
 
   // рендер активных в tech-list (только не проданные)
   renderList('tech-list',activeTech,editingTech,
@@ -792,6 +786,63 @@ window.restoreTech=async function(id){
   if(!item)return;
   await fbSet('data/tech/'+id,{...item,status:'active',sellPrice:0,sellDate:''});
 };
+
+window.clearArchiveFilter=function(){
+  document.getElementById('archive-from').value='';
+  document.getElementById('archive-to').value='';
+  renderArchive();
+};
+
+function renderArchive(){
+  const soldTech=st.tech.filter(t=>(t.status||'').trim()==='sold');
+  const fromVal=document.getElementById('archive-from').value;
+  const toVal=document.getElementById('archive-to').value;
+  const filtered=soldTech.filter(t=>{
+    if(!t.sellDate) return true;
+    if(fromVal && t.sellDate < fromVal) return false;
+    if(toVal && t.sellDate > toVal) return false;
+    return true;
+  });
+  const archiveEl=document.getElementById('archive-list');
+  if(filtered.length===0){
+    archiveEl.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">'+(soldTech.length>0?'Нет сделок за выбранный период':'Нет завершённых сделок')+'</div>';
+    document.getElementById('archive-margin-total').textContent='0 ₽';
+    document.getElementById('archive-vat-total').textContent='0 ₽';
+    return;
+  }
+  let totalMargin=0, totalVat=0;
+  archiveEl.innerHTML=filtered.map(t=>{
+    const cost=t.amount+(t.extra||0);
+    const realMargin=t.sellPrice?t.sellPrice-cost:null;
+    const vat=realMargin&&realMargin>0?Math.round(realMargin*22/122):0;
+    if(realMargin!==null){totalMargin+=realMargin;totalVat+=vat;}
+    const daysInSale=t.date&&t.sellDate?Math.floor((new Date(t.sellDate+'T00:00:00')-new Date(t.date+'T00:00:00'))/(1000*60*60*24)):null;
+    return `<div class="archive-row">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:13px;font-weight:500">${t.name}</div>
+        <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
+          <span class="itag itag-sold">✅ продано</span>
+          ${t.sellDate?`<span style="font-size:11px;color:#aaa">${new Date(t.sellDate+'T00:00:00').toLocaleDateString('ru-RU')}</span>`:''}
+          ${daysInSale!==null?`<span style="font-size:11px;color:#888">📅 ${daysInSale} дн.</span>`:''}
+          ${t.by?`<span style="font-size:11px;color:${getU(t.by).color}">· ${t.by}</span>`:''}
+        </div>
+        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#888">куплено: <b>${fmt(cost)} ₽</b></span>
+          ${t.sellPrice?`<span style="font-size:11px;color:#888">продано: <b style="color:#1a6b3c">${fmt(t.sellPrice)} ₽</b></span>`:''}
+          ${realMargin!==null?`<span style="font-size:11px;color:#888">маржа: <b style="${realMargin>=0?'color:#1a6b3c':'color:#c0392b'}">${realMargin>=0?'+':''}${fmt(realMargin)} ₽</b></span>`:''}
+          ${vat>0?`<span style="font-size:11px;color:#888">НДС 22%: <b style="color:#c0392b">${fmt(vat)} ₽</b></span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button class="btn-icon" onclick="restoreTech(${t.id})" title="Вернуть в продажу">↩️</button>
+        <button class="btn-icon btn-del" onclick="removeTech(${t.id})" title="Удалить">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('archive-margin-total').textContent=(totalMargin>=0?'+':'')+fmt(totalMargin)+' ₽';
+  document.getElementById('archive-margin-total').style.color=totalMargin>=0?'#1a6b3c':'#c0392b';
+  document.getElementById('archive-vat-total').textContent=fmt(totalVat)+' ₽';
+}
 
 window.showTrash=function(){
   const modal=document.getElementById('trash-modal');
