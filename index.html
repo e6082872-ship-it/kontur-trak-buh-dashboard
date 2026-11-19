@@ -721,13 +721,23 @@ function render(){
 
   // Р/С НДС
   document.getElementById('vat-rs-display').textContent=st.vatRS?fmt(st.vatRS)+' ₽':'—';
-  const allSoldVat=soldTech.reduce((a,t)=>{
+  // Начислено НДС — только за текущий квартал по sellDate
+  const now=new Date();
+  const qMonth=Math.floor(now.getMonth()/3)*3; // 0,3,6,9
+  const qStart=new Date(now.getFullYear(),qMonth,1);
+  const qEnd=new Date(now.getFullYear(),qMonth+3,0); // последний день квартала
+  const qStartStr=qStart.toISOString().slice(0,10);
+  const qEndStr=qEnd.toISOString().slice(0,10);
+  const qVat=soldTech.reduce((a,t)=>{
+    if(!t.sellDate||t.sellDate<qStartStr||t.sellDate>qEndStr) return a;
     const cost=t.amount+(t.extra||0);
     const rm=t.sellPrice?t.sellPrice-cost:0;
     return a+(rm>0?Math.round(rm*22/122):0);
   },0);
   const vaccrEl=document.getElementById('vat-accrued');
-  if(vaccrEl) vaccrEl.textContent=allSoldVat?fmt(allSoldVat)+' ₽':'—';
+  const qNames=['янв–мар','апр–июн','июл–сен','окт–дек'];
+  const qLabel=qNames[Math.floor(now.getMonth()/3)];
+  if(vaccrEl) vaccrEl.textContent=qVat?fmt(qVat)+' ₽ ('+qLabel+')':'0 ₽ ('+qLabel+')';
 
   renderArchive();
 
