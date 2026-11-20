@@ -111,7 +111,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- ФАКТИЧЕСКОЕ ТЕЛО — главная цифра -->
         <div class="surface" style="grid-column:span 1">
-          <div class="lbl">Фактическое тело</div>
+          <div class="lbl" style="min-height:32px">Фактическое тело</div>
           <div class="big" id="actual-display">—</div>
           <div style="font-size:11px;color:#888;margin-top:6px;line-height:1.6">
             = Р/С + Техника + Доп.расходы<br>+ Нам должны + Наша маржа − Мы должны
@@ -120,7 +120,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- ОСТАТОК НА Р/С -->
         <div class="surface">
-          <div class="lbl">Остаток на р/с</div>
+          <div class="lbl" style="min-height:32px">Остаток на р/с</div>
           <div class="big" id="rs-display" style="color:#185FA5">—</div>
           <div style="margin-top:8px;display:grid;gap:5px">
             <input class="inp" type="number" id="rs-inp" placeholder="₽" step="10000">
@@ -131,14 +131,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- ТЕХНИКА -->
         <div class="surface">
-          <div class="lbl">Вложено в технику</div>
+          <div class="lbl" style="min-height:32px">Вложено в технику</div>
           <div class="big" id="invested-display" style="color:#854F0B">—</div>
           <div style="font-size:11px;color:#aaa;margin-top:6px">Покупки + брони</div>
         </div>
 
         <!-- ТЕЛО ПЛАН — справочная цифра, пунктирная рамка -->
         <div class="surface-plan">
-          <div class="lbl" style="color:#7080b0">Тело (план) <span class="itag itag-gray">справка</span></div>
+          <div class="lbl" style="color:#7080b0;min-height:32px">Тело (план) <span class="itag itag-gray">справка</span></div>
           <div class="big" id="init-display" style="color:#4a5a8a">—</div>
           <div style="margin-top:8px;display:grid;gap:5px">
             <input class="inp" type="number" id="body-init-inp" placeholder="₽" step="100000">
@@ -149,14 +149,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- МАРЖА -->
         <div class="surface" style="border-left:3px solid #1D9E75">
-          <div class="lbl">Р/С маржа</div>
+          <div class="lbl" style="min-height:32px">Р/С маржа</div>
           <div class="big" id="body-margin-display" style="color:#0F6E56">—</div>
           <div style="font-size:11px;color:#aaa;margin-top:4px">Из раздела маржи от продаж</div>
         </div>
 
         <!-- Р/С НДС -->
         <div class="surface" style="border-left:3px solid #c0392b">
-          <div class="lbl">Р/С НДС</div>
+          <div class="lbl" style="min-height:32px">Р/С НДС</div>
           <div class="big" id="vat-rs-display" style="color:#c0392b">—</div>
           <div style="margin-top:8px;display:grid;gap:5px">
             <input class="inp" type="number" id="vat-rs-inp" placeholder="₽" step="10000">
@@ -776,8 +776,15 @@ function render(){
         <div style="display:grid;grid-template-columns:1fr;gap:6px">
           <input class="inp" type="text" id="et-enote-${t.id}" value="${t.extraNote||''}" placeholder="Комментарий к доп. расходам">
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
+        <div style="display:grid;grid-template-columns:1fr;gap:6px">
           <input class="inp" type="number" id="et-mgn-${t.id}" value="${t.margin||''}" step="10000" placeholder="План. маржа ₽">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <select class="inp" id="et-status-${t.id}"><option value="active" ${(t.status||'active')==='active'?'selected':''}>В продаже</option><option value="sold" ${t.status==='sold'?'selected':''}>Продано</option></select>
+          <input class="inp" type="date" id="et-sdate-${t.id}" value="${t.sellDate||''}" placeholder="Дата продажи">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
+          <input class="inp" type="number" id="et-sell-${t.id}" value="${t.sellPrice||''}" step="10000" placeholder="Цена продажи ₽">
           <button class="btn-icon btn-ok" onclick="saveEditTech(${t.id})">✓</button>
           <button class="btn-icon" onclick="cancelEditTech()">✕</button>
         </div>
